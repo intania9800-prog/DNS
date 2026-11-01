@@ -1,0 +1,7 @@
+{
+  "name": "AdGuard DNS - Order Akses & Pembayaran QRIS",
+  "description": "Layanan pemesanan akses AdGuard DNS resmi dengan pembayaran QRIS otomatis, konfirmasi WhatsApp instan, bukti bayar terintegrasi, dan dashboard admin real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
