@@ -243,81 +243,30 @@ export const SuccessReceiptModal: React.FC<SuccessReceiptModalProps> = ({
             )}
           </div>
 
-          {/* DNS Configuration Preview Box */}
-          <div className="p-4 rounded-2xl bg-gray-900 text-white space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wifi className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-emerald-300">
-                  Konfigurasi AdGuard DNS Anda
+          {/* Web is STRICTLY FOR PAYMENT ONLY: Notice about DNS delivery via Admin WhatsApp */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-wide">
+                  PENGIRIMAN AKSES DNS LEWAT ADMIN WHATSAPP
+                </h4>
+                <span className="text-[11px] text-emerald-700 font-bold block">
+                  Web Ini Khusus Pemesanan &amp; Pembayaran QRIS Saja
                 </span>
               </div>
-              <span className="text-[10px] text-gray-400 font-mono">
-                {transaction.status === 'TERVERIFIKASI_AKTIF' ? 'Status: AKTIF' : 'Status: AKTIVASI DIPROSES'}
-              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-gray-800/90 border border-gray-700">
-                <span className="text-[10px] text-gray-400 block font-semibold">IPv4 Utama</span>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="font-mono text-emerald-400 font-bold">
-                    {transaction.dnsCredentials?.primaryIpv4 || '94.140.14.14'}
-                  </span>
-                  <button
-                    onClick={() => handleCopy(transaction.dnsCredentials?.primaryIpv4 || '94.140.14.14', 'ipv4-1')}
-                    className="text-[10px] text-gray-400 hover:text-white"
-                  >
-                    {copiedText === 'ipv4-1' ? 'Disalin' : 'Salin'}
-                  </button>
-                </div>
-              </div>
+            <p className="text-xs text-gray-700 leading-relaxed font-medium">
+              Akses link &amp; konfigurasi <strong>AdGuard DNS Resmi (Khusus 1 Perangkat)</strong> akan dikirimkan langsung oleh Admin ke chat WhatsApp Anda ({transaction.whatsappNumber}) segera setelah bukti pembayaran QRIS ini diverifikasi.
+            </p>
 
-              <div className="p-2.5 rounded-xl bg-gray-800/90 border border-gray-700">
-                <span className="text-[10px] text-gray-400 block font-semibold">IPv4 Sekunder</span>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="font-mono text-emerald-400 font-bold">
-                    {transaction.dnsCredentials?.secondaryIpv4 || '94.140.15.15'}
-                  </span>
-                  <button
-                    onClick={() => handleCopy(transaction.dnsCredentials?.secondaryIpv4 || '94.140.15.15', 'ipv4-2')}
-                    className="text-[10px] text-gray-400 hover:text-white"
-                  >
-                    {copiedText === 'ipv4-2' ? 'Disalin' : 'Salin'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 p-2.5 rounded-xl bg-gray-800/90 border border-gray-700">
-                <span className="text-[10px] text-gray-400 block font-semibold">Private DNS Hostname (Android DoT)</span>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="font-mono text-emerald-400 font-bold truncate mr-2">
-                    {transaction.dnsCredentials?.dotServer || 'dns.adguard-dns.com'}
-                  </span>
-                  <button
-                    onClick={() => handleCopy(transaction.dnsCredentials?.dotServer || 'dns.adguard-dns.com', 'dot')}
-                    className="text-[10px] text-gray-400 hover:text-white shrink-0"
-                  >
-                    {copiedText === 'dot' ? 'Disalin' : 'Salin'}
-                  </button>
-                </div>
-              </div>
+            <div className="p-2.5 bg-white rounded-xl border border-emerald-200 flex items-center gap-2 text-xs text-emerald-800 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Silakan pastikan Anda telah menekan tombol "Kirim ke WhatsApp (+62 895-3655-44896)" di atas!</span>
             </div>
-
-            <div className="text-[11px] text-amber-300 font-bold bg-amber-950/40 border border-amber-500/30 p-2 rounded-xl text-center">
-              🔒 Akses terikat khusus untuk 1 perangkat saja (Single Device).
-            </div>
-
-            {onViewHowToSetup && (
-              <button
-                type="button"
-                onClick={onViewHowToSetup}
-                className="w-full py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-gray-700"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Panduan Cara Setting Lewat Aplikasi AdGuard</span>
-              </button>
-            )}
           </div>
 
           {/* Bottom Actions */}

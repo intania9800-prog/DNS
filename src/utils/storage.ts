@@ -177,10 +177,11 @@ export function formatDateTime(isoString: string): string {
   }
 }
 
-// Generate the WhatsApp confirmation link exactly matching user's requested format
+// Generate the WhatsApp confirmation link exactly matching user's requested format with bot control link
 export function generateWhatsAppConfirmationUrl(tx: Transaction, adminWaNumber: string = '62895365544896'): string {
   const cleanPhone = (adminWaNumber || '62895365544896').replace(/[^0-9]/g, '');
   const receiptUrl = `${window.location.origin}${window.location.pathname}?receipt=${encodeURIComponent(tx.id)}`;
+  const botAccUrl = `${window.location.origin}${window.location.pathname}?bot_acc=${encodeURIComponent(tx.id)}`;
 
   const message = `📌 *ORDERAN BARU MASUK - ADGUARD DNS*
 
@@ -199,13 +200,17 @@ Halo Admin, saya telah menyelesaikan pembayaran via *QRIS* dan melampirkan bukti
 🔗 *LINK BUKTI BAYAR & SLIP DIGITAL SISTEM:*
 ${receiptUrl}
 
+⚡ *KENDALI BOT ADMIN (KLIK DARI CHAT WA):*
+👉 *ACC & Kirim Link DNS Otomatis ke Pembeli:*
+${botAccUrl}
+
 Mohon segera diverifikasi dan dikirimkan konfigurasi akun DNS AdGuard saya ke chat ini. Terima kasih!`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
-// Generate notification message from admin to customer
-export function generateAdminToCustomerWhatsAppUrl(tx: Transaction): string {
+// Generate notification message from admin to customer with DNS link
+export function generateAdminToCustomerWhatsAppUrl(tx: Transaction, customDnsLink?: string): string {
   let cleanPhone = tx.whatsappNumber.replace(/[^0-9]/g, '');
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '62' + cleanPhone.slice(1);
@@ -215,23 +220,35 @@ export function generateAdminToCustomerWhatsAppUrl(tx: Transaction): string {
 
   const receiptUrl = `${window.location.origin}${window.location.pathname}?receipt=${encodeURIComponent(tx.id)}`;
   const creds = tx.dnsCredentials;
+  const linkToSend = customDnsLink || (creds ? creds.dohUrl : `https://dns.adguard-dns.com/dns-query/${tx.id.toLowerCase()}`);
+  const dotHost = creds ? creds.dotServer : `${tx.id.toLowerCase()}.adguard-dns.com`;
 
-  const message = `Halo kak ${tx.customerName},
+  const message = `Halo kak *${tx.customerName}*,
 
-Terima kasih telah berlangganan *AdGuard DNS (Khusus 1 Perangkat)*! Pembayaran dengan *Order ID ${tx.id}* sebesar *${formatRupiah(tx.totalPrice)}* telah *TERVERIFIKASI*.
+Pembayaran Anda via *QRIS (RHANK OLSHOP)* untuk *Order ID ${tx.id}* telah di-ACC & *TERVERIFIKASI RESMI*! ✅
 
-🚀 *AKSES ADGUARD DNS ANDA TELAH AKTIF (1 PERANGKAT):*
-${creds ? `
-• *IPv4 Utama:* \`${creds.primaryIpv4}\`
-• *IPv4 Cadangan:* \`${creds.secondaryIpv4}\`
-• *Private DNS (DoT):* \`${creds.dotServer}\`
-• *DNS-over-HTTPS (DoH):* \`${creds.dohUrl}\`
-` : 'Akses Anda sedang disiapkan dan aktif dalam 1 menit.'}
+🚀 *BERIKUT LINK & AKSES ADGUARD DNS ANDA (KHUSUS 1 PERANGKAT):*
+🔗 *Link Konfigurasi DNS:*
+${linkToSend}
 
-📄 *SLIP BUKTI BAYAR DIGITAL:*
+📌 *Rincian Server DNS Pribadi:*
+• *Private DNS (DoT):* \`${dotHost}\`
+• *DNS-over-HTTPS (DoH):* \`${linkToSend}\`
+• *IPv4 Utama:* \`94.140.14.14\`
+• *IPv4 Cadangan:* \`94.140.15.15\`
+
+📱 *PANDUAN AKTIVASI DI APLIKASI ADGUARD:*
+1. Buka Aplikasi *AdGuard* di perangkat Anda (Khusus 1 Perangkat).
+2. Buka menu *Pengaturan* > aktifkan *Perlindungan DNS*.
+3. Pilih *Server DNS* > *Tambah Server DNS Kustom*.
+4. Masukkan nama: *AdGuard DNS (1 Perangkat)*.
+5. Tempelkan Link DNS di atas pada kolom Alamat Server DNS.
+6. Simpan & Aktifkan. Selesai!
+
+📄 *Slip Bukti Transaksi Resmi:*
 ${receiptUrl}
 
-Panduan: Masukkan alamat DNS di atas pada menu Perlindungan DNS di Aplikasi AdGuard Anda!`;
+Jika ada kendala setting, silakan balas chat ini ya kak. Terima kasih telah berlangganan di RHANK OLSHOP!`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }

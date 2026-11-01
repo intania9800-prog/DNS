@@ -32,6 +32,7 @@ import { FooterBanner } from './components/FooterBanner';
 import { QRISModal } from './components/QRISModal';
 import { SuccessReceiptModal } from './components/SuccessReceiptModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AdminBotModal } from './components/AdminBotModal';
 import { AboutModal, FaqModal, SupportSetupModal } from './components/InfoModals';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
   // Modals state
   const [activeQRISTransaction, setActiveQRISTransaction] = useState<Transaction | null>(null);
   const [activeReceiptTransaction, setActiveReceiptTransaction] = useState<Transaction | null>(null);
+  const [activeBotTransaction, setActiveBotTransaction] = useState<Transaction | null>(null);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isFaqOpen, setIsFaqOpen] = useState<boolean>(false);
@@ -109,6 +111,16 @@ export default function App() {
     const adminParam = searchParams.get('admin');
     if (adminParam === 'true' || adminParam === '1' || adminParam === '44896') {
       setIsAdminDashboardOpen(true);
+    }
+
+    // Direct WhatsApp Bot command from Admin chat: ?bot_acc=ADG-xxx
+    const botAccId = searchParams.get('bot_acc');
+    if (botAccId) {
+      fetchTransactionAsync(botAccId).then((tx) => {
+        if (tx) {
+          setActiveBotTransaction(tx);
+        }
+      });
     }
 
     return () => {
@@ -325,6 +337,31 @@ export default function App() {
           onViewHowToSetup={() => {
             setActiveReceiptTransaction(null);
             setIsSupportOpen(true);
+          }}
+        />
+      )}
+
+      {/* WhatsApp Bot Admin Controller Modal (?bot_acc=ADG-xxx) */}
+      {activeBotTransaction && (
+        <AdminBotModal
+          transaction={activeBotTransaction}
+          onClose={() => {
+            setActiveBotTransaction(null);
+            if (window.location.search.includes('bot_acc')) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }}
+          onSuccessAcc={() => {
+            const customerName = activeBotTransaction.customerName;
+            setActiveBotTransaction(null);
+            setLiveToast({
+              message: 'Order Berhasil di-ACC!',
+              sub: `Link DNS telah dikirimkan ke WhatsApp pembeli (${customerName}).`
+            });
+            setTimeout(() => setLiveToast(null), 5000);
+            if (window.location.search.includes('bot_acc')) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
           }}
         />
       )}

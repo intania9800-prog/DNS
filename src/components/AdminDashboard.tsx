@@ -80,6 +80,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ).length;
 
   const handleVerify = (tx: Transaction) => {
+    const defaultLink = tx.dnsCredentials?.dohUrl || `https://dns.adguard-dns.com/dns-query/${tx.id.toLowerCase()}`;
+    const inputLink = prompt(
+      `Masukkan Link DNS yang akan dikirim ke WhatsApp ${tx.customerName} (${tx.whatsappNumber}):`,
+      defaultLink
+    );
+    if (inputLink === null) return; // Admin cancelled
+
     updateTransaction(tx.id, {
       status: 'TERVERIFIKASI_AKTIF',
       verifiedAt: new Date().toISOString()
@@ -87,8 +94,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (settings.soundAlerts) {
       playSuccessChime();
     }
-    // Also prompt or open WhatsApp to send DNS credentials to customer
-    const waUrl = generateAdminToCustomerWhatsAppUrl(tx);
+    // Open WhatsApp to send DNS credentials to customer with the chosen link
+    const waUrl = generateAdminToCustomerWhatsAppUrl(tx, inputLink.trim() || undefined);
     window.open(waUrl, '_blank');
   };
 
