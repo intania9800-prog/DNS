@@ -1,0 +1,40 @@
+[
+  {
+    "id": "ADG-TEST01",
+    "customerName": "Rengga",
+    "whatsappNumber": "089638506274",
+    "packageName": "1 Bulan",
+    "durationLabel": "1 Bulan",
+    "basePrice": 200000,
+    "uniqueCode": 381,
+    "totalPrice": 200381,
+    "paymentMethod": "QRIS",
+    "status": "MENUNGGU_VERIFIKASI_ADMIN",
+    "proofImageUrl": "/assets/aistudio/image_10d9fd81.png"
+  },
+  {
+    "id": "ADG-782910",
+    "customerName": "Budi Santoso",
+    "whatsappNumber": "081288991234",
+    "packageId": "plan-1-bulan",
+    "packageName": "1 Bulan",
+    "durationLabel": "1 Bulan",
+    "basePrice": 200000,
+    "uniqueCode": 147,
+    "totalPrice": 200147,
+    "paymentMethod": "QRIS",
+    "status": "TERVERIFIKASI_AKTIF",
+    "createdAt": "2026-11-01T10:38:44.203Z",
+    "paidAt": "2026-11-01T10:43:44.203Z",
+    "verifiedAt": "2026-11-01T10:48:44.203Z",
+    "dnsCredentials": {
+      "primaryIpv4": "94.140.14.14",
+      "secondaryIpv4": "94.140.15.15",
+      "primaryIpv6": "2a10:50c0::ad1:ff",
+      "secondaryIpv6": "2a10:50c0::ad2:ff",
+      "dohUrl": "https://dns.adguard-dns.com/dns-query/adg-budi-147",
+      "dotServer": "adg-budi-147.adguard-dns.com",
+      "userTag": "adg-budi-147"
+    }
+  }
+]

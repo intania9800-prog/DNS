@@ -205,17 +205,40 @@ export const SuccessReceiptModal: React.FC<SuccessReceiptModalProps> = ({
               </div>
             </div>
 
-            {/* Proof Attachment preview if present */}
-            {transaction.proofImageUrl && (
-              <div className="pt-2 border-t border-gray-100">
-                <span className="text-[10px] text-gray-400 uppercase font-bold block mb-1">
-                  Lampiran Bukti Transfer:
-                </span>
-                <img
-                  src={transaction.proofImageUrl}
-                  alt="Bukti Transfer"
-                  className="max-h-36 rounded-xl border border-gray-200 object-contain bg-gray-50 p-1"
-                />
+            {/* Proof Attachment preview - PROMINENT FOR ADMIN INSPECTION */}
+            {transaction.proofImageUrl ? (
+              <div className="pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-800">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>BUKTI PEMBAYARAN TRANSFER QRIS (TERLAMPIR)</span>
+                  </div>
+                  <a
+                    href={transaction.proofImageUrl}
+                    download={`Bukti-Bayar-${transaction.id}.png`}
+                    className="text-[11px] text-emerald-700 font-bold hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Buka Ukuran Penuh ↗
+                  </a>
+                </div>
+
+                <div className="p-2 bg-gray-50 rounded-2xl border-2 border-emerald-300 text-center">
+                  <img
+                    src={transaction.proofImageUrl}
+                    alt={`Bukti Transfer ${transaction.id}`}
+                    className="max-h-80 w-auto object-contain rounded-xl mx-auto shadow-sm cursor-pointer hover:opacity-95 transition-opacity"
+                    onClick={() => window.open(transaction.proofImageUrl, '_blank')}
+                  />
+                  <span className="text-[10px] text-gray-500 font-medium block mt-1.5">
+                    Ketuk gambar untuk melihat resolusi penuh / perbesar
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-gray-100 text-center py-2 text-xs text-gray-400">
+                <span>Belum ada foto bukti bayar yang dilampirkan.</span>
               </div>
             )}
           </div>

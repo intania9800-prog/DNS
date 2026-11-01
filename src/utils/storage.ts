@@ -27,16 +27,33 @@ export function saveTransactions(transactions: Transaction[]) {
   }
 }
 
-export function addTransaction(tx: Transaction) {
+// Sync to backend server so it works across different devices / browsers
+export async function syncTransactionToServer(tx: Transaction): Promise<void> {
+  try {
+    await fetch('/api/transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tx),
+    });
+  } catch (err) {
+    console.warn('Backend sync failed, stored in localStorage only', err);
+  }
+}
+
+export function addTransaction(tx: Transaction): Transaction {
   const all = getTransactions();
-  const updated = [tx, ...all];
+  const updated = [tx, ...all.filter(t => t.id !== tx.id)];
   saveTransactions(updated);
+  // Persist to server
+  syncTransactionToServer(tx);
   return tx;
 }
 
 export function updateTransaction(id: string, patch: Partial<Transaction>): Transaction | null {
   const all = getTransactions();
-  const idx = all.findIndex((t) => t.id === id);
+  const idx = all.findIndex((t) => t.id.toLowerCase() === id.toLowerCase());
   if (idx === -1) return null;
 
   const current = all[idx];
@@ -63,12 +80,48 @@ export function updateTransaction(id: string, patch: Partial<Transaction>): Tran
 
   all[idx] = updatedTx;
   saveTransactions(all);
+  // Persist to server
+  syncTransactionToServer(updatedTx);
   return updatedTx;
 }
 
-export function getTransactionById(id: string): Transaction | undefined {
+// Fetch single transaction (checks localStorage first, then queries backend API)
+export async function fetchTransactionAsync(id: string): Promise<Transaction | null> {
+  // First check localStorage
   const all = getTransactions();
-  return all.find((t) => t.id.toLowerCase() === id.toLowerCase());
+  const localMatch = all.find((t) => t.id.toLowerCase() === id.toLowerCase());
+  
+  try {
+    const res = await fetch(`/api/transactions/${encodeURIComponent(id)}`);
+    if (res.ok) {
+      const serverTx: Transaction = await res.json();
+      // Cache to local storage
+      const merged = [serverTx, ...all.filter(t => t.id.toLowerCase() !== id.toLowerCase())];
+      saveTransactions(merged);
+      return serverTx;
+    }
+  } catch (err) {
+    console.debug('Failed to fetch from server API, using local match', err);
+  }
+
+  return localMatch || null;
+}
+
+// Initial fetch of all transactions from server
+export async function fetchAllTransactionsFromServer(): Promise<Transaction[]> {
+  try {
+    const res = await fetch('/api/transactions');
+    if (res.ok) {
+      const serverList: Transaction[] = await res.json();
+      if (serverList && serverList.length > 0) {
+        saveTransactions(serverList);
+        return serverList;
+      }
+    }
+  } catch (err) {
+    console.debug('Could not fetch list from server', err);
+  }
+  return getTransactions();
 }
 
 export function getAdminSettings(): AdminSettings {
@@ -79,7 +132,6 @@ export function getAdminSettings(): AdminSettings {
       return DEFAULT_ADMIN_SETTINGS;
     }
     const parsed = JSON.parse(raw);
-    // Ensure active WhatsApp is updated to user specified 62895365544896 and RHANK OLSHOP
     if (!parsed.adminWhatsapp || parsed.adminWhatsapp.includes('81234567890')) {
       parsed.adminWhatsapp = DEFAULT_ADMIN_SETTINGS.adminWhatsapp;
       parsed.merchantName = DEFAULT_ADMIN_SETTINGS.merchantName;
@@ -113,25 +165,24 @@ export function formatRupiah(amount: number): string {
 export function formatDateTime(isoString: string): string {
   try {
     const date = new Date(isoString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }) + ' WIB';
+    const day = date.getDate().toString().padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day} ${month} ${year}, ${hours}.${minutes} WIB`;
   } catch {
     return isoString;
   }
 }
 
-// Generate the WhatsApp confirmation link for the user to notify admin (+62 895-3655-44896)
+// Generate the WhatsApp confirmation link exactly matching user's requested format
 export function generateWhatsAppConfirmationUrl(tx: Transaction, adminWaNumber: string = '62895365544896'): string {
   const cleanPhone = (adminWaNumber || '62895365544896').replace(/[^0-9]/g, '');
   const receiptUrl = `${window.location.origin}${window.location.pathname}?receipt=${encodeURIComponent(tx.id)}`;
 
-  const message = `🔔 *ORDERAN BARU MASUK - ADGUARD DNS*
+  const message = `📌 *ORDERAN BARU MASUK - ADGUARD DNS*
 
 Halo Admin, saya telah menyelesaikan pembayaran via *QRIS* dan melampirkan bukti bayar.
 
@@ -143,8 +194,9 @@ Halo Admin, saya telah menyelesaikan pembayaran via *QRIS* dan melampirkan bukti
 • *Total Transfer QRIS:* ${formatRupiah(tx.totalPrice)} (termasuk kode unik #${tx.uniqueCode})
 • *Merchant QRIS:* RHANK OLSHOP (NMID: ID1026559812460)
 • *Waktu:* ${formatDateTime(tx.paidAt || tx.createdAt)}
-${tx.proofImageUrl ? '• *Bukti Transfer:* Sudah dilampirkan di sistem ✅\n' : ''}${tx.notes ? `• *Catatan:* ${tx.notes}\n` : ''}
-🧾 *LINK BUKTI BAYAR & SLIP DIGITAL SISTEM:*
+• *Bukti Transfer:* Sudah dilampirkan di sistem ✅
+
+🔗 *LINK BUKTI BAYAR & SLIP DIGITAL SISTEM:*
 ${receiptUrl}
 
 Mohon segera diverifikasi dan dikirimkan konfigurasi akun DNS AdGuard saya ke chat ini. Terima kasih!`;
@@ -166,20 +218,20 @@ export function generateAdminToCustomerWhatsAppUrl(tx: Transaction): string {
 
   const message = `Halo kak ${tx.customerName},
 
-Terima kasih telah berlangganan *AdGuard DNS*! Pembayaran dengan *Order ID ${tx.id}* sebesar *${formatRupiah(tx.totalPrice)}* telah *TERVERIFIKASI*.
+Terima kasih telah berlangganan *AdGuard DNS (Khusus 1 Perangkat)*! Pembayaran dengan *Order ID ${tx.id}* sebesar *${formatRupiah(tx.totalPrice)}* telah *TERVERIFIKASI*.
 
-🚀 *AKSES ADGUARD DNS ANDA TELAH AKTIF:*
+🚀 *AKSES ADGUARD DNS ANDA TELAH AKTIF (1 PERANGKAT):*
 ${creds ? `
 • *IPv4 Utama:* \`${creds.primaryIpv4}\`
 • *IPv4 Cadangan:* \`${creds.secondaryIpv4}\`
-• *Private DNS (DoT Android):* \`${creds.dotServer}\`
-• *DNS-over-HTTPS (DoH Browser/iOS):* \`${creds.dohUrl}\`
+• *Private DNS (DoT):* \`${creds.dotServer}\`
+• *DNS-over-HTTPS (DoH):* \`${creds.dohUrl}\`
 ` : 'Akses Anda sedang disiapkan dan aktif dalam 1 menit.'}
 
 📄 *SLIP BUKTI BAYAR DIGITAL:*
 ${receiptUrl}
 
-Jika membutuhkan bantuan setting perangkat (HP/Laptop/MikroTik), silakan balas chat ini ya kak!`;
+Panduan: Masukkan alamat DNS di atas pada menu Perlindungan DNS di Aplikasi AdGuard Anda!`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
@@ -197,12 +249,12 @@ export function playSuccessChime() {
     const gainNode = ctx.createGain();
 
     osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(523.25, now); // C5
-    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.12); // E5
+    osc1.frequency.setValueAtTime(523.25, now);
+    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
 
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(659.25, now + 0.12);
-    osc2.frequency.exponentialRampToValueAtTime(1046.50, now + 0.28); // C6
+    osc2.frequency.exponentialRampToValueAtTime(1046.50, now + 0.28);
 
     gainNode.gain.setValueAtTime(0.2, now);
     gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);

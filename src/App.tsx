@@ -18,6 +18,9 @@ import {
   saveAdminSettings, 
   playSuccessChime, 
   generateWhatsAppConfirmationUrl,
+  fetchTransactionAsync,
+  fetchAllTransactionsFromServer,
+  syncTransactionToServer,
   TX_EVENT_NAME 
 } from './utils/storage';
 import { Navbar } from './components/Navbar';
@@ -42,6 +45,7 @@ export default function App() {
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isFaqOpen, setIsFaqOpen] = useState<boolean>(false);
   const [isSupportOpen, setIsSupportOpen] = useState<boolean>(false);
+  const [isReceiptLoading, setIsReceiptLoading] = useState<boolean>(false);
 
   // Floating notification toast for real-time events
   const [liveToast, setLiveToast] = useState<{ message: string; sub?: string } | null>(null);
@@ -55,6 +59,13 @@ export default function App() {
   useEffect(() => {
     syncTransactions();
 
+    // Fetch from backend server to get latest transactions across devices
+    fetchAllTransactionsFromServer().then((list) => {
+      if (list && list.length > 0) {
+        setTransactions(list);
+      }
+    });
+
     const handleTxUpdate = () => {
       syncTransactions();
     };
@@ -67,10 +78,31 @@ export default function App() {
     const receiptId = searchParams.get('receipt') || searchParams.get('order');
     if (receiptId) {
       const all = getTransactions();
-      const match = all.find((t) => t.id.toLowerCase() === receiptId.toLowerCase());
-      if (match) {
-        setActiveReceiptTransaction(match);
+      const localMatch = all.find((t) => t.id.toLowerCase() === receiptId.toLowerCase());
+      if (localMatch) {
+        setActiveReceiptTransaction(localMatch);
+      } else {
+        setIsReceiptLoading(true);
+        setLiveToast({
+          message: 'Memuat Bukti Pembayaran...',
+          sub: `Mengambil data transaksi ${receiptId} dari sistem`
+        });
       }
+
+      // Always fetch from server to guarantee uploaded proof image is retrieved
+      fetchTransactionAsync(receiptId).then((serverTx) => {
+        setIsReceiptLoading(false);
+        if (serverTx) {
+          setActiveReceiptTransaction(serverTx);
+          setLiveToast(null);
+        } else if (!localMatch) {
+          setLiveToast({
+            message: 'Slip Transaksi Tidak Ditemukan',
+            sub: `Order ID ${receiptId} belum tercatat di sistem.`
+          });
+          setTimeout(() => setLiveToast(null), 5000);
+        }
+      });
     }
 
     // Discreet admin access via URL parameter ?admin=true or ?admin=44896
@@ -112,7 +144,7 @@ export default function App() {
   };
 
   // User confirmed "Saya Sudah Bayar via QRIS" & attached proof
-  const handleConfirmPaid = (proofUrl?: string, notes?: string) => {
+  const handleConfirmPaid = async (proofUrl?: string, notes?: string) => {
     if (!activeQRISTransaction) return;
 
     const updated = updateTransaction(activeQRISTransaction.id, {
@@ -123,6 +155,9 @@ export default function App() {
     });
 
     if (updated) {
+      // Sync immediately to server so admin opening receipt link gets it with image!
+      await syncTransactionToServer(updated);
+
       // Confetti celebratory effect
       try {
         confetti({
@@ -234,6 +269,17 @@ export default function App() {
         onOpenSupport={() => setIsSupportOpen(true)}
       />
 
+      {/* Loading Modal if opening receipt link */}
+      {isReceiptLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl text-center space-y-3 max-w-sm w-full">
+            <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
+            <h4 className="text-sm font-black text-gray-900">Memuat Slip &amp; Bukti Pembayaran...</h4>
+            <p className="text-xs text-gray-500">Menghubungkan ke database sistem AdGuard DNS</p>
+          </div>
+        </div>
+      )}
+
       {/* Main Landing Page Content */}
       <main className="flex-1">
         {/* 1. Hero Section */}
@@ -269,7 +315,13 @@ export default function App() {
         <SuccessReceiptModal
           transaction={activeReceiptTransaction}
           adminWhatsapp={settings.adminWhatsapp}
-          onClose={() => setActiveReceiptTransaction(null)}
+          onClose={() => {
+            setActiveReceiptTransaction(null);
+            // Clean URL query param so refresh doesn't reopen modal unless requested
+            if (window.location.search.includes('receipt') || window.location.search.includes('order')) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }}
           onViewHowToSetup={() => {
             setActiveReceiptTransaction(null);
             setIsSupportOpen(true);
